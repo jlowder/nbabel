@@ -1,4 +1,4 @@
-(ql:quickload :cl-ppcre)
+(ql:quickload :cl-ppcre :silent t)
 (use-package :cl-ppcre)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -111,7 +111,7 @@
                             (list 0 0 0))
                 as acc = fi then (v+v acc fi)
                 finally (return acc))))
-      (let ((alg (leapfrog #'Fi))
+      (let ((integrator (leapfrog #'Fi))
             (dt 1d-3)
             (brk "=======================")
             (e0 (- (ke) (pe)))
@@ -123,7 +123,7 @@
            do (when (zerop (mod inc 10))
                 (summary time (ke) (pe) e0)
                 (loop for i from 0 to (1- (length xdata))
-                   do (multiple-value-bind (nx nv) (funcall alg i dt)
+                   do (multiple-value-bind (nx nv) (funcall integrator i dt)
                         (setf (nth i xdata) nx)
                         (setf (nth i vdata) nv)))))))))
   
