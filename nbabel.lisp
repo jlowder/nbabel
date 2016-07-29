@@ -114,10 +114,11 @@
       (let ((alg (leapfrog #'Fi))
             (dt 1d-3)
             (brk "=======================")
-            (e0 (- (ke) (pe))))
+            (e0 (- (ke) (pe)))
+            (tend (with-input-from-string (l (or (second (uiop:command-line-arguments)) "1")) (read l))))
         (lineout "Time" "Kinetic Energy" "Potential Energy" "Total Energy" "Energy Error")
         (lineout brk brk brk brk brk)
-        (loop for time from 0 to 1 by dt
+        (loop for time from 0 to tend by dt
            as inc = 0 then (1+ inc)
            do (when (zerop (mod inc 10))
                 (summary time (ke) (pe) e0)
