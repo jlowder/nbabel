@@ -1,30 +1,27 @@
-#!/bin/sh
-#|-*- mode:lisp -*-|#
-#|
-exec ros -Q -- $0 "$@"
-|#
 (ql:quickload :cl-ppcre)
-(defpackage :ros.script.nbabel.3677171773
-  (:use :cl :cl-ppcre))
-(in-package :ros.script.nbabel.3677171773)
+(use-package :cl-ppcre)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; some vector utility functions
+;; some general arbitrary-length vector utility functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun vlen^2 (r &optional (acc 0))
+  "length of a vector, squared"
   (cond ((null r) acc)
         ((numberp r) (+ acc (* r r)))
         (t (vlen^2 (cdr r) (+ acc (* (car r) (car r)))))))
 
 (defun vlen (r)
+  "length of a vector"
   (sqrt (vlen^2 r)))
 
 (defun s*v (s v)
+  "scalar times vector"
   (loop for i in v
      collect (* s i)))
 
 (defun v-v (&rest r)
+  "vector subtraction, first vector minus all remaining vectors passed in"
   (flet ((rec (p1 p2)
            (loop for a in p1
               for b in p2
@@ -32,6 +29,7 @@ exec ros -Q -- $0 "$@"
     (reduce #'rec r)))
 
 (defun v+v (&rest r)
+  "vector addition, sum of all vectors passed in"
   (flet ((rec (v1 v2)
            (loop for x in v1
               for y in v2
@@ -39,6 +37,7 @@ exec ros -Q -- $0 "$@"
     (reduce #'rec r)))
 
 (defun dot (a b &optional (acc 0))
+  "dot product of two vectors"
   (if (or (null a) (null b))
       acc
       (dot (cdr a) (cdr b) (+ acc (* (car a) (car b))))))
@@ -77,10 +76,9 @@ exec ros -Q -- $0 "$@"
   (let ((te (- ke pe)))
     (lineout time ke pe te (/ (- te e0) e0))))
 
-(defun main (&rest argv)
-  (declare (ignorable argv))
+(defun main ()
   (destructuring-bind (xdata vdata masses)
-      (ingest (or (car argv) "input16"))
+      (ingest (or (car (uiop:command-line-arguments)) "input16"))
     (flet ((ke ()
              "kinetic energy calculation"
              (loop for v in vdata
