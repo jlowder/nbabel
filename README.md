@@ -8,7 +8,7 @@ CL code submission for nbabel (http://nbabel.org), n-body code using leapfrog in
     Author:             Jason Lowdermilk <jlowdermilk@gmail.com>
     Integration scheme: Predictor-corrector leapfrog
     Compiler:           SBCL 1.2.13
-    Operating           system: Ubuntu 14.04 x86_64 3.13.0-76-generic
+    Operating system:   Ubuntu 14.04 x86_64 3.13.0-76-generic
     Hardware:           Intel(R) Core(TM) i7-4600M CPU @ 2.90GHz
 
 ## Performance
