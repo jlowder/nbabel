@@ -15,6 +15,8 @@ CL code submission for nbabel (http://nbabel.org), n-body code using leapfrog in
 
     Time step: 1.e-3 N-body unit
     Integration from t=0 to t=1.0
+    Initial Conditions: input`N` (Plummer distribution of `N` equal mass particles)
+
 
     N      tCPU     dE/E
     ====== ======== ======================
