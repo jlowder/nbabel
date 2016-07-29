@@ -118,7 +118,7 @@
             (tend (with-input-from-string (l (or (second (uiop:command-line-arguments)) "1")) (read l))))
         (lineout "Time" "Kinetic Energy" "Potential Energy" "Total Energy" "Energy Error")
         (lineout brk brk brk brk brk)
-        (summary 0d0 (ke) (pe) e0)))))))
+        (summary 0d0 (ke) (pe) e0)
         (loop for time from 0 to tend by dt
            as inc = 0 then (1+ inc)
            do (loop for i from 0 to (1- (length xdata))
