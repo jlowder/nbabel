@@ -25,7 +25,7 @@
   (flet ((rec (p1 p2)
            (loop for a in p1
               for b in p2
-              collect (- b a))))
+              collect (- a b))))
     (reduce #'rec r)))
 
 (defun v+v (&rest r)
@@ -48,7 +48,7 @@
 
 (defun force (ri rj mj)
   "calculate the force between two particles"
-  (let* ((p (v-v ri rj))
+  (let* ((p (v-v rj ri))
          (c (* mj (expt (vlen^2 p) -1.5))))
     (s*v c p)))
 
@@ -89,7 +89,7 @@
              (let ((n (length xdata)))
                (loop for i from 0 to (1- n) sum
                     (loop for j from (1+ i) to (1- n)
-                       sum (/ (* (nth i masses) (nth j masses)) (vlen (v-v (nth i xdata) (nth j xdata))))))))
+                       sum (/ (* (nth i masses) (nth j masses)) (vlen (v-v (nth j xdata) (nth i xdata))))))))
            (leapfrog (f)
              "create a closure representing the leapfrog algorithm. `F` is a function that calculates a particle's instantaneous acceleration."
              (lambda (i dt)
