@@ -1,12 +1,12 @@
-(ql:quickload :cl-ppcre :silent t)
-(use-package :cl-ppcre)
-
-;; this version is CLOS with high-speed vector functions based on arrays
+;; This version uses high-speed vector functions based on arrays. Acceleration values are cached as
+;; members of the star class for efficient implementation of the leapfrog method.
 
 (declaim (optimize (speed 3) (debug 0) (safety 0))
          (inline make-3v v+v v-v vlen^2 vlen s*v force 3v/0 3v/1 3v/2))
 
 (setf *read-default-float-format* 'double-float)
+
+(defconstant +dt+ 1d-3) ; global timestep
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; a 3-vector type
@@ -100,7 +100,7 @@
 
 (defgeneric update-accelerations (c))
 
-(defgeneric load-file (c fname))
+(defgeneric load-stdin (c))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; specialized methods
@@ -127,7 +127,7 @@
         (k (kinetic-energy c)))
     (values (+ p k) p k)))
 
-(defmethod update-positions ((c cluster) dt)        
+(defmethod update-positions ((c cluster) dt)
   (loop for star in (stars c)
      as vel = (vel star)
      as acc = (acc star)
@@ -160,24 +160,29 @@
              do (when (not (= i j))
                   (setf (acc star-i) (v-v (acc star-i) (force (pos star-i) (pos star-j) (mass star-j)))))))))
 
-(defun file->strlist (filename)
+(defun stdin->strlist ()
   "read a text file as a list of strings"
-  (with-open-file (stream filename)
-    (loop for line = (read-line stream nil)
-       while line
-       collect line)))
+  (loop for line = (read-line *standard-input* nil)
+     while line
+     collect line))
 
-(defmethod load-file ((c cluster) fname)
-  "initialize the cluster from a file"
+(defun split-spaces (s &optional acc)
+  (let ((o (search " " s)))
+    (if (null o)
+        (reverse (remove-if (lambda (x) (string= "" x)) (cons s acc)))
+        (split-spaces (string-trim '(#\ ) (subseq s o)) (cons (subseq s 0 o) acc)))))
+
+(defmethod load-stdin ((c cluster))
+  "initialize the cluster from stdin"
   (setf (stars c)
         (loop for line in (remove-if (lambda (x) (< (length x) 3))
-                                     (mapcar (lambda (x) (split " +" x)) (file->strlist fname)))
+                                     (mapcar #'split-spaces (stdin->strlist)))
            as parsed = (mapcar (lambda (x) (with-input-from-string (l x) (read l))) line)
            as star = (make-instance 'star
                                     :mass (elt parsed 1)
                                     :pos (apply #'make-3v (subseq parsed 2 5))
                                     :vel (apply #'make-3v (subseq parsed 5)))
-        collect star)))
+           collect star)))
 
 (defmethod print-object ((obj star) out)
   (print-unreadable-object (obj out :type t)
@@ -202,26 +207,24 @@
 (defun summary (time tot ke pe e0)
   (lineout time ke pe tot (/ (- tot e0) e0)))
 
-(defconstant dt 1d-3)
-
 (defun main ()
   (let ((brk "=======================")
         (cluster (make-instance 'cluster))
-        (tend (with-input-from-string (l (or (second (uiop:command-line-arguments)) "1")) (read l))))
-    (load-file cluster (or (car (uiop:command-line-arguments)) "input128"))
+        (tend 1d0))
+    (load-stdin cluster)
     ;;(format t "~S~%" cluster)
     (update-accelerations cluster)
     (multiple-value-bind (e0 pe ke) (energy cluster)
+      (declare (ignore pe ke))
       (lineout "Time" "Kinetic Energy" "Potential Energy" "Total Energy" "Energy Error")
       (lineout brk brk brk brk brk)
-      (summary 0d0 e0 ke pe e0)
-      (loop for time from 0d0 to tend by dt
-         as inc = 0 then (1+ inc)
+      (loop for time from 0d0 to (+ +dt+ tend) by +dt+
+         as k = 0 then (1+ k)
          do
-           (update-positions cluster dt)
+           (update-positions cluster +dt+)
            (update-accelerations cluster)
-           (update-velocities cluster dt)
-           (when (zerop (mod inc 10))
+           (update-velocities cluster +dt+)
+           (when (zerop (mod k 10))
              (multiple-value-bind (e pe ke) (energy cluster)
                (summary time e ke pe e0)))))))
 
