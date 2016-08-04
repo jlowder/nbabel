@@ -1,6 +1,3 @@
-(ql:quickload :cl-ppcre :silent t)
-(use-package :cl-ppcre)
-
 ;; This version uses general-purpose vector functions based on simple
 ;; lists, and decoupled integration algorithms to allow easy
 ;; comparison of integration schemes.
@@ -73,7 +70,7 @@
 
 (defgeneric energy (c))
 
-(defgeneric load-file (c fname))
+(defgeneric load-stdin (c))
 
 (defgeneric timestep (c integrator))
 
@@ -108,24 +105,30 @@
          (c (* mj (expt (vlen^2 p) -1.5))))
     (s*v c p)))
 
-(defun file->strlist (filename)
-  "read a text file as a list of strings"
-  (with-open-file (stream filename)
-    (loop for line = (read-line stream nil)
-       while line
-       collect line)))
+(defun stdin->strlist ()
+  "read stdin as a list of strings"
+  (loop for line = (read-line *standard-input* nil)
+     while line
+     collect line))
 
-(defmethod load-file ((c cluster) fname)
-  "initialize the cluster from a file"
+(defun split-spaces (s &optional acc)
+  "tokenize a string by splitting at space characters"
+  (let ((o (search " " s)))
+    (if (null o)
+        (reverse (remove-if (lambda (x) (string= "" x)) (cons s acc)))
+        (split-spaces (string-trim '(#\ ) (subseq s o)) (cons (subseq s 0 o) acc)))))
+
+(defmethod load-stdin ((c cluster))
+  "initialize the cluster from stdin"
   (setf (stars c)
         (loop for line in (remove-if (lambda (x) (< (length x) 3))
-                                     (mapcar (lambda (x) (split " +" x)) (file->strlist fname)))
+                                     (mapcar #'split-spaces (stdin->strlist)))
            as parsed = (mapcar (lambda (x) (with-input-from-string (l x) (read l))) line)
            as star = (make-instance 'star
                                     :mass (elt parsed 1)
                                     :pos (apply #'list (subseq parsed 2 5))
                                     :vel (apply #'list (subseq parsed 5)))
-        collect star)))
+           collect star)))
 
 (defmethod print-object ((obj star) out)
   (print-unreadable-object (obj out :type t)
@@ -151,6 +154,7 @@
   (lineout time ke pe tot (/ (- tot e0) e0)))
 
 (defmethod timestep ((c cluster) integrator)
+  "update `CLUSTER` for one timestep using `INTEGRATOR` as the integration algorithm"
   (loop for i below (length (stars c))
      as star = (elt (stars c) i)
      do (multiple-value-bind (nx nv) (funcall integrator i)
@@ -158,9 +162,9 @@
           (setf (vel star) nv))))
 
 (defun force-on-particle (cluster)
-  "create a closure around cluster for calculating the force on a particle"
+  "create a closure around `CLUSTER` for calculating the force on a particle"
   (lambda (i p)
-    "calculate the total force acting on particle i, at position p"
+    "calculate the total force acting on particle `I`, at position `P`"
     (loop for star in (stars cluster)
        as xi = (pos star)
        as j = 0 then (incf j)
@@ -179,7 +183,7 @@
              (xi (pos star))
              (vi (vel star))
              (xi+1 (v+v xi (s*v +dt+ vi))))
-        (values 
+        (values
          xi+1
          (v+v vi (s*v +dt+ (funcall f i xi))))))))
 
@@ -224,13 +228,13 @@
 (defun main ()
   (let ((brk "=======================")
         (cluster (make-instance 'cluster))
-        (tend (with-input-from-string (l (or (second (uiop:command-line-arguments)) "1")) (read l))))
-    (load-file cluster (or (car (uiop:command-line-arguments)) "input128"))
+        (tend 1d0))
+    (load-stdin cluster)
     (multiple-value-bind (e0 pe ke) (energy cluster)
       (lineout "Time" "Kinetic Energy" "Potential Energy" "Total Energy" "Energy Error")
       (lineout brk brk brk brk brk)
       (summary 0d0 e0 ke pe e0)
-      (let ((integrator (leapfrog cluster))) 
+      (let ((integrator (leapfrog cluster)))
         (loop for time from 0d0 to tend by +dt+
            as inc = 0 then (1+ inc)
            do (timestep cluster integrator)

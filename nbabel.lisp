@@ -161,12 +161,13 @@
                   (setf (acc star-i) (v-v (acc star-i) (force (pos star-i) (pos star-j) (mass star-j)))))))))
 
 (defun stdin->strlist ()
-  "read a text file as a list of strings"
+  "read stdin as a list of strings"
   (loop for line = (read-line *standard-input* nil)
      while line
      collect line))
 
 (defun split-spaces (s &optional acc)
+  "tokenize a string by splitting at space characters"
   (let ((o (search " " s)))
     (if (null o)
         (reverse (remove-if (lambda (x) (string= "" x)) (cons s acc)))
